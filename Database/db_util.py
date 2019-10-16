@@ -36,6 +36,18 @@ class Database:
         """
         if self.conn != None:
             self.conn.close()
+    
+    def execute(self, operation, query):
+        """ execute the given query
+        :param operation: caller function's name
+        :param query: query to be executed
+        """
+        try:
+            cur = self.conn.cursor()
+            cur.execute(query)
+        except:
+            print("Error in " + str(operation)+ "operation")
+            self.conn.rollback()
 
     def new_table(self, name, schema):
         """ create a new table with the given schema
@@ -44,12 +56,7 @@ class Database:
         :return: None
         """
         query = "CREATE TABLE " + str(name) + " (" + str(schema) +");"
-        try:
-            cur = self.conn.cursor()
-            cur.execute(query)
-        except:
-            print("Error in create table operation")
-            self.conn.rollback()
+        self.execute("create new table", query)
 
     def create(self, query, data):
         """ create rows in table from the given data
@@ -64,16 +71,13 @@ class Database:
             print("error in insert operation")
             self.conn.rollback()
 
-    def read(self, table_name, cols_needed, conditions):
+    def read(self, table_name, cols_needed="*", conditions=None):
         """ get all rows, or all rows specified by the query
         :param table_name: name of the table to select from
         :param cols_needed: string with comma separated list of cols needed, defaults to *
         :param conditions: string with conditions
         :return: result table
         """
-        if cols_needed == None:
-            cols_needed = "*"
-
         if conditions == None:
             query = "SELECT " + cols_needed + " FROM " + table_name
         else:
@@ -85,15 +89,48 @@ class Database:
             return cur.fetchall()
         except:
             print("error in select operation")
-            self.conn.rollback
+            self.conn.rollback()
 
 
-    def update(self, query):
-        """ 
+    def update(self, table_name, new_vals, prim_key_id):
+        """ update certain values specified by query
+        :param table_name: name of th table to update
+        :param new_vals: a dict with attributes as keys, and
+                         values as values
+        :param prim_key_id: key value pair as list of size 2 
+                         primary key identifier for row to update
+        :return: None
         """
-        pass
+        query = "UPDATE " + table_name + " SET "
+        for key in new_vals.keys():
+            query += str(key) \
+                    + " " \
+                    + str(new_vals[key]) \
+                    + " , "\
 
-    def delete(self, query):
+        # remove last comma, and space
+        query = query[:len(query) - 3]
+        query += " WHERE " \
+                + str(prim_key_id[0]) \
+                + " = " \
+                + str(prim_key_id[1]) \
+
+        # execute the query
+        self.execute("update", query)
+
+    def delete(self, table_name, prim_key_id):
+        """ delete a row from specified table, and prim key value
+        :param table_name: name of the table to delete from 
+        :param prim_key_id: key value pair as list of size 2 
+                         primary key identifier for row to update
+        :return: None
         """
-        """
-        pass
+        query = "DELETE FROM " \
+                + table_name \
+                + " WHERE " \
+                + str(prim_key_id[0]) \
+                + " = " \
+                + str(prim_key_id[1]) \
+
+        # execute the query
+        self.execute("delete", query)
